@@ -1,57 +1,49 @@
-
-import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import {headers} from "next/headers"
 import { VerifyToken } from "@/app/utility/JwtHelper";
-import nodemailer from "nodemailer"
+import nodemailer from "nodemailer";
 
+export async function GET(req, res) {
+    try {
+        const reqToken = await req.cookies.get('token');
 
-export async function GET(req, res){
+        if (!reqToken) {
+            // Handle the case where 'token' cookie is not set
+            return NextResponse.json({ msg: "Token not found" }, { status: 400 });
+        }
 
-
-        const reqToken = await req.cookies.get('token')
-        const result = reqToken['value']
-        const verify = await VerifyToken(result)
-
+        const verify = await VerifyToken(reqToken['value']);
         const mail = verify['email'];
-        console.log(mail)
 
-    //nodemailer.verify
+        const ToEmail = mail;
+        // console.log(ToEmail)
+        
+        // Transporter
+        const Transporter = nodemailer.createTransport({
+            host: "mail.teamrabbil.com",
+            port: 25,
+            secure: false,
+            auth: {
+                user: "info@teamrabbil.com",
+                pass: '~sR4[bhaC[Qs'
+            },
+            tls: { rejectUnauthorized: false }
+        });
 
-    // const ToEmail = searchParams.get('email');
-    const ToEmail = mail;
-    //Transporter
-    const Transporter = nodemailer.createTransport({
-        host: "mail.teamrabbil.com",
-        port: 25,
-        secure: false,
-        auth:{
-            user: "info@teamrabbil.com",
-            pass: '~sR4[bhaC[Qs'
-        },
-        tls: {rejectUnauthorized: false}
+        // Prepare email
+        let myEmail = {
+            from: "Test Email From Nextjs app<info@teamrabbil.com>",
+            to: ToEmail,
+            subject: "Test Email From Nextjs app",
+            text: "Test Email From Nextjs app",
+        };
 
-    })
-
-    //prepare  email
-    let myEmail = {
-        from: "Test Email From Nextjs app<info@teamrabbil.com>",
-        to: ToEmail,
-        subject: "Test Email From Nextjs app",
-        text: "Test Email From Nextjs app",
-    }
-
-    try{
         const resultEmail = await Transporter.sendMail(myEmail);
+
         return NextResponse.json(
-            {status: true, msg: "Email successfully sent ", data: resultEmail, Token: reqToken, verify: verify},
-            {status: 200 }
-
-        )
+            { status: true, msg: "Email successfully sent ", data: resultEmail, Token: reqToken, verify: verify },
+            { status: 200 }
+        );
+    } catch (e) {
+        return NextResponse.json({ msg: "Email send failed" }, { status: 500 });
     }
-    catch(e){
-        return NextResponse.json({msg: "Email successfully failed "})
-    }
-
-    //nodemailer.verify
 }
